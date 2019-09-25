@@ -1,0 +1,47 @@
+#!groovy
+
+node('multistage') {
+
+    currentBuild.result = "SUCCESS"
+
+    try {
+
+        def scmVars
+
+        stage('Checkout') {
+            scmVars = checkout scm
+        }
+
+        def props = readProperties file: 'build.properties'
+
+        def appName    = props['appName']
+        def appVersion = props['appVersion']
+
+        def dockerImage = "unicred/${appName}:${appVersion}"
+
+        println "App Name: ${appName}"
+        println "App version: ${appVersion}" 
+        println "Docker image: ${dockerImage}"
+
+        DOCKER_REPO_IMAGE = "${appVersion}".contains("RELEASE") ?  "$DOCKER_RELEASE_REPO" : "$DOCKER_SNAPSHOT_REPO"
+
+        println "Deploying image: ${dockerImage}"
+
+        stage('Build Docker image') {
+             sh "docker build -t ${dockerImage} ."
+        }
+
+        stage('Upload Docker image') {
+            withCredentials([usernamePassword(credentialsId: 'nexus_docker', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
+                                sh "docker login -p '${DOCKER_PASSWORD}' -u ${DOCKER_USER} ${DOCKER_REPO_IMAGE}"
+                                sh "docker tag ${dockerImage} ${DOCKER_REPO_IMAGE}/${dockerImage}"
+                                sh "docker push ${DOCKER_REPO_IMAGE}/${dockerImage}"
+                                sh "docker rmi ${DOCKER_REPO_IMAGE}/${dockerImage} ${dockerImage}"
+            }
+        }
+
+    } catch (err) {
+        currentBuild.result = "FAILURE"
+        throw err
+    }
+}
