@@ -19,7 +19,10 @@ docker run --rm -it -e TZ=America/Sao_Paulo crontab-us:latest "* * * * * echo He
 
 Run multiple jobs
 ```
-docker run --rm -it -e TZ=America/Sao_Paulo crontab-us:latest "* * * * * echo Hello" "*/2 * * * * echo Hello2" "*/5 * * * * echo Hello5"
+docker run --rm -it crontab-us:latest \
+  "* * * * *   echo Hello1" \
+  "*/2 * * * * echo Hello2" \
+  "*/5 * * * * echo Hello5"
 ```
 # Author
 Juan Enciso (juan.enciso@gmail.com)
